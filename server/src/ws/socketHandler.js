@@ -15,7 +15,10 @@ function generateUsername() {
 }
 
 export default (io) => {
+  console.log('🔌 Socket.io initialized');
+
   io.on('connection', async (socket) => {
+    console.log(`📡 New connection attempt: ${socket.id}`);
     let currentUser = null;
 
     try {
@@ -29,6 +32,7 @@ export default (io) => {
     }
 
     socket.on('register', async (data) => {
+      console.log(`📝 Registration request from ${socket.id}:`, data);
       try {
         const { username, color, id } = data;
         

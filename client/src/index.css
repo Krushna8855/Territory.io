@@ -714,15 +714,21 @@ body {
 
 .toasts {
   position: fixed;
-  bottom: 32px;
-  right: 32px;
+  top: 88px; /* Slightly below the header */
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 12px;
   z-index: 10000;
+  width: 100%;
+  max-width: 400px;
+  pointer-events: none;
 }
 
 .toast-card {
+  pointer-events: auto;
+  text-align: center;
   background: var(--bg-card);
   border: 1px solid var(--border);
   padding: 16px 24px;

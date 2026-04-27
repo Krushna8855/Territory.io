@@ -30,7 +30,10 @@ export const GameProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const newSocket = io(SOCKET_URL);
+    const newSocket = io(SOCKET_URL, {
+      transports: ['websocket'], // Force pure WebSocket for ultra-low latency
+      upgrade: false
+    });
     setSocket(newSocket);
 
     newSocket.on('initial_state', (data) => {
@@ -103,8 +106,17 @@ export const GameProvider = ({ children }) => {
     }
     if (cooldown > 0) return;
     
+    // OPTIMISTIC UPDATE: Reflect change instantly before server responds
+    const optimisticBlock = {
+      x, y, userId: user.id, username: user.username, color: user.color, isOptimistic: true
+    };
+    setBlocks(prev => ({
+      ...prev,
+      [`${x},${y}`]: optimisticBlock
+    }));
+
     socket.emit('capture_block', { x, y });
-    setCooldown(100); 
+    setCooldown(5000); 
   }, [user, cooldown, socket]);
 
   const useBomb = (x, y) => {
