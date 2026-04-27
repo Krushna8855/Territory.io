@@ -116,7 +116,7 @@ export const GameProvider = ({ children }) => {
     }));
 
     socket.emit('capture_block', { x, y });
-    setCooldown(5000); 
+    setCooldown(CAPTURE_COOLDOWN); 
   }, [user, cooldown, socket]);
 
   const useBomb = (x, y) => {
