@@ -769,56 +769,148 @@ body {
 .top-badge.badge-2 { color: #cbd5e1; }
 .top-badge.badge-3 { color: #d97706; }
 
-/* Responsive Media Queries */
+/* --- Enhanced Mobile Responsiveness --- */
+
+/* Laptops and Small Desktops */
 @media (max-width: 1200px) {
   .game-container {
-    grid-template-columns: 1fr 280px;
-    gap: 16px;
-    padding: 16px;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    padding: 0 24px 24px 24px;
   }
 }
 
+/* Tablets and Large Phones */
 @media (max-width: 992px) {
+  body {
+    overflow: auto; /* Allow scrolling on mobile */
+  }
+
+  .app-layout {
+    height: auto;
+    min-height: 100vh;
+  }
+
   .game-container {
     grid-template-columns: 1fr;
-    overflow-y: auto;
+    height: auto;
+    overflow: visible;
   }
-  
+
+  .map-section {
+    height: 500px; /* Fixed height for map on mobile */
+  }
+
   .sidebar {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .stats-card {
     flex-direction: row;
-    flex-wrap: wrap;
+    overflow-x: auto;
+    padding: 12px;
   }
-  
-  .stats-card, .leaderboard-panel {
-    flex: 1;
-    min-width: 300px;
+
+  .stat-item {
+    min-width: 140px;
   }
-  
-  .topbar {
-    padding: 0 16px;
+
+  .leaderboard-panel {
+    max-height: 400px;
   }
-  
+
   .game-stats {
-    display: none; /* Hide on smaller screens to save space */
+    display: none; /* Hide topbar stats on small screens */
   }
 }
 
-@media (max-width: 600px) {
+/* Standard Mobile Phones */
+@media (max-width: 640px) {
   .topbar {
     height: auto;
-    padding: 12px;
+    padding: 12px 16px;
     flex-direction: column;
     gap: 12px;
   }
-  
+
+  .brand-text h1 {
+    font-size: 18px;
+  }
+
   .topbar-actions {
     width: 100%;
-    justify-content: center;
+    justify-content: space-between;
+    padding-left: 0;
+    border-left: none;
     border-top: 1px solid var(--border);
     padding-top: 12px;
   }
-  
+
   .player-profile {
+    padding-left: 0;
     border-left: none;
   }
+
+  .game-container {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .map-section {
+    height: 400px;
+    gap: 16px;
+  }
+
+  .map-card {
+    border-radius: 16px;
+    padding: 8px;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 24px;
+    border-radius: 20px;
+  }
+
+  .modal-header h2 {
+    font-size: 20px;
+  }
+
+  .color-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .cooldown-card {
+    bottom: 20px;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .toasts {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+  }
+
+  .toast-card {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+
+  .cell {
+    min-width: 18px; /* Slightly smaller for mobile density but still touchable */
+  }
 }
+
+/* Landscape Mobile and very small screens */
+@media (max-height: 500px) and (orientation: landscape) {
+  .app-layout {
+    height: auto;
+  }
+  .map-section {
+    height: 300px;
+  }
+}
+
