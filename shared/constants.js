@@ -1,6 +1,6 @@
 export const GRID_WIDTH = 50;
 export const GRID_HEIGHT = 30;
-export const CAPTURE_COOLDOWN = 5000; // 5 seconds
+export const CAPTURE_COOLDOWN = 100; // 0.1 seconds (Turbo Mode)
 
 export const POWERUP_CHANCE = 0.05; // 5% chance on capture
 export const POWERUP_TYPES = {
