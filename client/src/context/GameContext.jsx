@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { GRID_WIDTH, GRID_HEIGHT } from '../../../shared/constants.js';
+import { GRID_W, GRID_H, RECHARGE_MS, BONUSES } from '../../../shared/constants.js';
 
 const GameContext = createContext();
 
@@ -17,9 +17,8 @@ export const GameProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [inventory, setInventory] = useState({
-    BOMB: 0
-  });
+  const [powerups, setPowerups] = useState({ BOMB: 0, SHIELD: 0 });
+  const [activityFeed, setActivityFeed] = useState([]);
 
   const addToast = useCallback((message, type = 'success') => {
     const id = Date.now();
@@ -31,14 +30,16 @@ export const GameProvider = ({ children }) => {
 
   useEffect(() => {
     const newSocket = io(SOCKET_URL, {
-      transports: ['websocket'], // Force pure WebSocket for ultra-low latency
-      upgrade: false
+      transports: ['websocket', 'polling'], // Allow fallback for better reliability
     });
     setSocket(newSocket);
 
     newSocket.on('initial_state', (data) => {
-      setBlocks(data.blocks);
-      setOnlineCount(data.connectedCount || 0);
+      console.log('📦 State received:', data);
+      // Correct mapping: data.grid is { blocks, width, height }
+      setBlocks(data.grid?.blocks || {});
+      setLeaderboard(data.leaderboard || []);
+      setOnlineCount(data.onlineCount || 0);
       setIsLoading(false);
     });
 
@@ -56,13 +57,58 @@ export const GameProvider = ({ children }) => {
       newSocket.emit('register', { id: parsedUser.id });
     }
 
-    newSocket.on('block_captured', (data) => {
+    newSocket.on('tile_hit', (data) => {
       setBlocks(prev => ({
         ...prev,
-        [`${data.x},${data.y}`]: data
+        [`${data.x},${data.y}`]: {
+          x: data.x,
+          y: data.y,
+          userId: data.uid,
+          username: data.name,
+          color: data.color
+        }
       }));
       setRecentCapture(`${data.x},${data.y}`);
       setTimeout(() => setRecentCapture(null), 500);
+
+      // INSTANT LEADERBOARD UPDATE
+      setLeaderboard(prev => {
+        let next = [...prev];
+        
+        // Winner gets +1
+        const winnerIndex = next.findIndex(u => String(u.id) === String(data.uid));
+        if (winnerIndex !== -1) {
+          next[winnerIndex] = { ...next[winnerIndex], block_count: parseInt(next[winnerIndex].block_count) + 1 };
+        } else {
+          // If winner isn't on the board yet, add them (if board isn't full)
+          if (next.length < 20) {
+            next.push({ id: data.uid, username: data.name, color: data.color, block_count: 1 });
+          }
+        }
+
+        // Victim gets -1
+        if (data.victimId) {
+          const victimIndex = next.findIndex(u => String(u.id) === String(data.victimId));
+          if (victimIndex !== -1) {
+            next[victimIndex] = { ...next[victimIndex], block_count: Math.max(0, parseInt(next[victimIndex].block_count) - 1) };
+          }
+        }
+
+        // Sort by score immediately
+        return next.sort((a, b) => b.block_count - a.block_count);
+      });
+
+      // Add to live feed
+      setActivityFeed(prev => [
+        {
+          id: Date.now(),
+          user: data.name,
+          color: data.color,
+          action: `claimed tile (${data.x}, ${data.y})`,
+          time: new Date().toLocaleTimeString()
+        },
+        ...prev.slice(0, 19)
+      ]);
     });
 
     newSocket.on('user_joined', (data) => {
@@ -73,16 +119,16 @@ export const GameProvider = ({ children }) => {
       setOnlineCount(data.onlineCount);
     });
 
-    newSocket.on('error', (data) => {
-      addToast(data.message, 'error');
+    newSocket.on('alert', (data) => {
+      addToast(data.msg, data.type || 'info');
     });
     
-    newSocket.on('powerup_received', (data) => {
-      setInventory(prev => ({
+    newSocket.on('gift', (data) => {
+      setPowerups(prev => ({
         ...prev,
         [data.type]: (prev[data.type] || 0) + 1
       }));
-      addToast(`Received Power-up: ${data.type}!`, 'success');
+      addToast(`Bonus Received: ${data.type}!`, 'success');
     });
 
     newSocket.on('area_captured', (data) => {
@@ -99,30 +145,30 @@ export const GameProvider = ({ children }) => {
     return () => newSocket.disconnect();
   }, [addToast]);
 
-  const captureBlock = useCallback((x, y) => {
+  const hitTile = useCallback((x, y) => {
     if (!user) {
       setShowRegisterModal(true);
       return;
     }
     if (cooldown > 0) return;
     
-    // OPTIMISTIC UPDATE: Reflect change instantly before server responds
-    const optimisticBlock = {
-      x, y, userId: user.id, username: user.username, color: user.color, isOptimistic: true
+    // Tapping logic
+    const pendingTap = {
+      x, y, uid: user.id, name: user.username, color: user.color, isOptimistic: true
     };
     setBlocks(prev => ({
       ...prev,
-      [`${x},${y}`]: optimisticBlock
+      [`${x},${y}`]: pendingTap
     }));
 
-    socket.emit('capture_block', { x, y });
-    setCooldown(CAPTURE_COOLDOWN); 
+    socket.emit('claim_tile', { x, y });
+    setCooldown(RECHARGE_MS); 
   }, [user, cooldown, socket]);
 
   const useBomb = (x, y) => {
-    if (inventory.BOMB <= 0) return;
+    if (powerups.BOMB <= 0) return;
     socket.emit('use_bomb', { x, y });
-    setInventory(prev => ({ ...prev, BOMB: prev.BOMB - 1 }));
+    setPowerups(prev => ({ ...prev, BOMB: prev.BOMB - 1 }));
   };
 
   useEffect(() => {
@@ -145,10 +191,11 @@ export const GameProvider = ({ children }) => {
     addToast,
     showRegisterModal,
     setShowRegisterModal,
-    captureBlock,
+    hitTile,
     useBomb,
-    inventory,
-    cooldown
+    powerups,
+    cooldown,
+    activityFeed
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

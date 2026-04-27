@@ -3,24 +3,9 @@ import { useGame } from '../context/GameContext';
 import { Trophy, Users, Shield, Zap } from 'lucide-react';
 
 const Sidebar = () => {
-  const { leaderboard, setLeaderboard, onlineCount, user, blocks } = useGame();
+  const { leaderboard, onlineCount, user, blocks } = useGame();
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const res = await fetch('/api/leaderboard');
-        const data = await res.json();
-        setLeaderboard(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 5000);
-    return () => clearInterval(interval);
-  }, [setLeaderboard]);
-
-  const userBlocks = Object.values(blocks).filter(b => b.userId === user?.id).length;
+  const userBlocks = Object.values(blocks || {}).filter(b => b?.userId === user?.id).length;
 
   return (
     <aside className="sidebar">
@@ -29,7 +14,7 @@ const Sidebar = () => {
           <Users size={20} color="#60a5fa" />
           <div className="stat-info">
             <span className="stat-label">Online</span>
-            <span className="stat-value">{onlineCount}</span>
+            <span className="stat-value">{onlineCount || 0}</span>
           </div>
         </div>
         <div className="stat-item">
@@ -47,7 +32,7 @@ const Sidebar = () => {
           <h3>Leaderboard</h3>
         </div>
         <div className="leaderboard-list">
-          {leaderboard.map((entry, index) => (
+          {(leaderboard || []).map((entry, index) => (
             <div key={entry.id} className={`leaderboard-row ${String(entry.id) === String(user?.id) ? 'is-me' : ''}`}>
               <div className="rank">
                 <span className={`rank-num rank-${index + 1}`}>#{index + 1}</span>

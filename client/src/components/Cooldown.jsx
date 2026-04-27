@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
 import { Timer } from 'lucide-react';
+import { RECHARGE_MS } from '../../../shared/constants';
 
 const Cooldown = () => {
   const { cooldown } = useGame();
@@ -14,7 +15,7 @@ const Cooldown = () => {
         <div className="progress-bg">
           <div 
             className="progress-fill" 
-            style={{ width: `${cooldown}%` }}
+            style={{ width: `${(cooldown / RECHARGE_MS) * 100}%` }}
           ></div>
         </div>
         <span className="cooldown-text">RECHARGING...</span>

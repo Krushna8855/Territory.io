@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 
-const Cell = memo(({ x, y, block, isRecent, isMine, onCapture, onBomb }) => {
+const Cell = memo(({ x, y, block, isRecent, isMine, onHit, onBomb }) => {
   const isOwned = !!block;
 
   return (
@@ -10,7 +10,7 @@ const Cell = memo(({ x, y, block, isRecent, isMine, onCapture, onBomb }) => {
         backgroundColor: isOwned ? block.color : 'transparent',
         '--cell-color': block?.color
       }}
-      onClick={() => onCapture(x, y)}
+      onClick={() => onHit(x, y)}
       onContextMenu={(e) => {
         e.preventDefault();
         onBomb(x, y);

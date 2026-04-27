@@ -1,10 +1,10 @@
 import React from 'react';
 import Cell from './Cell';
-import { GRID_WIDTH, GRID_HEIGHT } from '../../../shared/constants.js';
+import { GRID_W, GRID_H } from '../../../shared/constants.js';
 import { useGame } from '../context/GameContext';
 
 const Grid = () => {
-  const { blocks, isLoading, recentCapture, user, captureBlock, useBomb } = useGame();
+  const { blocks = {}, isLoading, recentCapture, user, hitTile, useBomb } = useGame();
 
   if (isLoading) {
     return (
@@ -16,18 +16,18 @@ const Grid = () => {
   }
 
   const cells = [];
-  for (let y = 0; y < GRID_HEIGHT; y++) {
-    for (let x = 0; x < GRID_WIDTH; x++) {
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
       const key = `${x},${y}`;
       cells.push(
         <Cell 
           key={key} 
           x={x} 
           y={y} 
-          block={blocks[key]}
+          block={blocks ? blocks[key] : null}
           isRecent={recentCapture === key}
-          isMine={blocks[key]?.userId === user?.id}
-          onCapture={captureBlock}
+          isMine={blocks && blocks[key]?.userId === user?.id}
+          onHit={hitTile}
           onBomb={useBomb}
         />
       );
@@ -38,8 +38,8 @@ const Grid = () => {
     <div 
       className="grid-canvas"
       style={{
-        gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)`,
-        gridTemplateRows: `repeat(${GRID_HEIGHT}, 1fr)`,
+        gridTemplateColumns: `repeat(${GRID_W}, 1fr)`,
+        gridTemplateRows: `repeat(${GRID_H}, 1fr)`,
       }}
     >
       {cells}

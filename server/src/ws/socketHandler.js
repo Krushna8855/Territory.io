@@ -1,11 +1,11 @@
-import * as gridStore from '../store/gridStore.js';
-import { GRID_WIDTH, GRID_HEIGHT, CAPTURE_COOLDOWN, USER_COLORS, POWERUP_CHANCE, POWERUP_TYPES } from '../../../shared/constants.js';
+import { GameViewModel } from '../viewmodels/GameViewModel.js';
+import { GRID_W, GRID_H, RECHARGE_MS, COLORS, LUCK_FACTOR, BONUSES } from '../../../shared/constants.js';
 
 const connectedUsers = new Map();
 const userCooldowns = new Map();
 
 function getRandomColor() {
-  return USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+  return COLORS[Math.floor(Math.random() * COLORS.length)];
 }
 
 function generateUsername() {
@@ -15,31 +15,32 @@ function generateUsername() {
 }
 
 export default (io) => {
-  console.log('🔌 Socket.io initialized');
+  console.log('🔌 Socket.io initialized (MVVM Mode)');
 
   io.on('connection', async (socket) => {
     console.log(`📡 New connection attempt: ${socket.id}`);
     let currentUser = null;
 
     try {
-      const state = await gridStore.getGridState();
+      const state = await GameViewModel.getPlayableState();
+      console.log(`📦 Sending initial state: ${Object.keys(state.grid.blocks).length} tiles`);
+
       socket.emit('initial_state', {
-        ...state,
-        connectedCount: connectedUsers.size
+        grid: state.grid,
+        leaderboard: state.leaderboard,
+        onlineCount: connectedUsers.size
       });
     } catch (error) {
-      console.error('WS Error:', error);
+      console.error('WS Sync Error:', error);
     }
 
     socket.on('register', async (data) => {
-      console.log(`📝 Registration request from ${socket.id}:`, data);
       try {
         const { username, color, id } = data;
         
         let user;
         if (id) {
-          // Attempt to resume session
-          user = await gridStore.findUserById(id);
+          user = await GameViewModel.syncUser(id);
           if (user) {
             currentUser = user;
             connectedUsers.set(socket.id, currentUser);
@@ -49,76 +50,53 @@ export default (io) => {
           }
         }
 
-        // New registration attempt
         const targetName = username || generateUsername();
         const targetColor = color || getRandomColor();
         
-        const existingUser = await gridStore.findUserByUsername(targetName);
-        if (existingUser) {
-          return socket.emit('error', { message: 'Username already taken! Choose another.' });
-        }
-        
-        user = await gridStore.createUser(targetName, targetColor);
+        user = await GameViewModel.onboardUser(targetName, targetColor);
         currentUser = user;
         connectedUsers.set(socket.id, currentUser);
         
         socket.emit('registered', currentUser);
         io.emit('user_joined', { user: currentUser, onlineCount: connectedUsers.size });
       } catch (error) {
-        socket.emit('error', { message: 'Registration failed' });
+        socket.emit('error', { message: error.message });
       }
     });
 
-    socket.on('capture_block', async (data) => {
-      if (!currentUser) return socket.emit('error', { message: 'Not registered' });
-      
-      const { x, y } = data;
-      if (x < 0 || x >= GRID_WIDTH || y < 0 || y >= GRID_HEIGHT) {
-        return socket.emit('error', { message: 'Invalid coordinates' });
-      }
-
-      const lastCapture = userCooldowns.get(currentUser.id) || 0;
-      if (Date.now() - lastCapture < CAPTURE_COOLDOWN) {
-        return socket.emit('error', { message: 'Cooldown active' });
-      }
-
+    socket.on('claim_tile', async (data) => {
       try {
-        const result = await gridStore.captureBlock(x, y, currentUser.id);
+        const { x, y } = data;
+        if (!currentUser) return;
+        
+        const lastCapture = userCooldowns.get(currentUser.id) || 0;
+        if (Date.now() - lastCapture < RECHARGE_MS) {
+          return socket.emit('error', { message: 'Cooldown active' });
+        }
+
+        const result = await GameViewModel.handleClaim(x, y, currentUser.id);
         if (result.success) {
           userCooldowns.set(currentUser.id, Date.now());
           
-          // Random Powerup Drop
-          if (Math.random() < POWERUP_CHANCE) {
-            socket.emit('powerup_received', { type: POWERUP_TYPES.BOMB });
+          const hit = { 
+            x, y, 
+            uid: currentUser.id, 
+            name: currentUser.username, 
+            color: currentUser.color,
+            victimId: result.victim ? result.victim.id : null // Tell everyone who lost the tile
+          };
+          io.emit('tile_hit', hit);
+
+          if (result.victim) {
+            // Logic for notifying victims could go here
           }
 
-          io.emit('block_captured', {
-            x, y, userId: currentUser.id, username: currentUser.username, color: currentUser.color
-          });
-        } else {
-          socket.emit('error', { message: result.message });
+          if (Math.random() < LUCK_FACTOR) {
+            socket.emit('gift', { type: BONUSES.NUKE });
+          }
         }
       } catch (error) {
-        socket.emit('error', { message: 'Capture failed' });
-      }
-    });
-
-    socket.on('use_bomb', async (data) => {
-      if (!currentUser) return;
-      const { x, y } = data;
-
-      try {
-        const result = await gridStore.captureArea(x, y, 1, currentUser.id);
-        if (result.success) {
-          io.emit('area_captured', {
-            blocks: result.capturedBlocks,
-            userId: currentUser.id,
-            username: currentUser.username,
-            color: currentUser.color
-          });
-        }
-      } catch (error) {
-        socket.emit('error', { message: 'Bomb deployment failed' });
+        console.error('Claim Error:', error);
       }
     });
 

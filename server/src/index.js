@@ -5,7 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api.js';
 import socketHandler from './ws/socketHandler.js';
-import { GRID_WIDTH, GRID_HEIGHT } from '../../shared/constants.js';
+import { GRID_W, GRID_H } from '../../shared/constants.js';
 
 dotenv.config();
 
@@ -27,5 +27,5 @@ socketHandler(io);
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Territory server running on port ${PORT}`);
-  console.log(`📊 Grid size: ${GRID_WIDTH}x${GRID_HEIGHT}`);
+  console.log(`📊 Grid size: ${GRID_W}x${GRID_H}`);
 });

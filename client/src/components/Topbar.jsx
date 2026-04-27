@@ -1,10 +1,12 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
 import { Layout, Share2, Info } from 'lucide-react';
+import { GRID_W, GRID_H } from '../../../shared/constants';
 
 const Topbar = () => {
-  const { blocks, user } = useGame();
-  const totalBlocks = Object.keys(blocks).length;
+  const { blocks = {}, user } = useGame();
+  const totalBlocks = Object.keys(blocks || {}).length;
+  const maxBlocks = GRID_W * GRID_H;
 
   return (
     <header className="topbar">
@@ -25,7 +27,7 @@ const Topbar = () => {
         </div>
         <div className="stat-pill">
           <span className="pill-label">Available</span>
-          <span className="pill-value">{1500 - totalBlocks}</span>
+          <span className="pill-value">{maxBlocks - totalBlocks}</span>
         </div>
       </div>
 

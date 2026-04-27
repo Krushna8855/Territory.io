@@ -6,13 +6,13 @@ import Sidebar from './components/Sidebar';
 import Feed from './components/Feed';
 import Powerups from './components/Powerups';
 import Cooldown from './components/Cooldown';
-import { USER_COLORS } from '../../shared/constants.js';
+import { COLORS } from '../../shared/constants.js';
 import { Play, X } from 'lucide-react';
 
 const GameContent = () => {
   const { showRegisterModal, setShowRegisterModal, user, socket, toasts } = useGame();
   const [username, setUsername] = useState('');
-  const [selectedColor, setSelectedColor] = useState(USER_COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(COLORS[0]);
 
   const handleRegister = () => {
     if (!username.trim()) return;
@@ -66,7 +66,7 @@ const GameContent = () => {
               <div className="color-selector">
                 <label>Signature Color</label>
                 <div className="color-grid">
-                  {USER_COLORS.map(c => (
+                  {COLORS.map(c => (
                     <button 
                       key={c}
                       className={`color-pill ${selectedColor === c ? 'active' : ''}`}
