@@ -1,5 +1,7 @@
 # 🏴 Territory.io
 
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/deploy?repo=https://github.com/Krushna8855/Territory.io)
+
 A high-performance, real-time multiplayer grid conquest game. Claim territory, deploy power-ups, and dominate the global leaderboard in this premium Pixel War experience.
 
 ![Territory.io Preview](https://via.placeholder.com/1200x600/1a1b26/ffffff?text=Territory.io+Real-time+Multiplayer+Grid+Warfare)
