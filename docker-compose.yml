@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: territory_db
+    restart: always
+    environment:
+      POSTGRES_DB: pixelwars
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+      - postgres_data:/var/lib/postgresql/data
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: territory_server
+    restart: always
+    environment:
+      PORT: 3001
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: pixelwars
+      DB_USER: postgres
+      DB_PASSWORD: password123
+    ports:
+      - "3001:3001"
+    depends_on:
+      - database
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    container_name: territory_client
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:

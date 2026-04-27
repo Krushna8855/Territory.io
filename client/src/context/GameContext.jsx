@@ -4,7 +4,7 @@ import { GRID_WIDTH, GRID_HEIGHT } from '../../../shared/constants.js';
 
 const GameContext = createContext();
 
-const SOCKET_URL = 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? window.location.origin : 'http://localhost:3001');
 
 export const GameProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);

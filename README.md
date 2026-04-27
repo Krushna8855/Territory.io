@@ -99,6 +99,22 @@ A high-performance, real-time multiplayer grid conquest game. Claim territory, d
 3.  Start the development server: `npm run dev`
 4.  Open `http://localhost:5173` in your browser.
 
+## 🐳 Docker Deployment (The "Single Unit" Method)
+
+You can run the entire stack (Frontend, Backend, and Database) as a single unit using Docker Compose.
+
+1.  **Prerequisites**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2.  **Start the app**:
+    ```bash
+    docker-compose up --build
+    ```
+3.  **Access the app**:
+    - Frontend: `http://localhost`
+    - Backend API: `http://localhost:3001`
+    - Database: `localhost:5432`
+
+The database will be automatically initialized with the schema in `database.sql`.
+
 ## 🛡️ Security & Performance
 -   **Atomic Transactions**: Block captures use SQL transactions to prevent race conditions in high-concurrency scenarios.
 -   **Cooldown Logic**: Server-side validation of capture timestamps to prevent botting.
