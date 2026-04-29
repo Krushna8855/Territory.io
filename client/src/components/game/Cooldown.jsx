@@ -1,7 +1,7 @@
 import React from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../context/GameContext';
 import { Timer } from 'lucide-react';
-import { RECHARGE_MS } from '../../../shared/constants';
+import { RECHARGE_MS } from '../../../../shared/constants';
 
 const Cooldown = () => {
   const { cooldown } = useGame();

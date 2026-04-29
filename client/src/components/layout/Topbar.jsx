@@ -1,10 +1,10 @@
 import React from 'react';
-import { useGame } from '../context/GameContext';
-import { Layout, Share2, Info } from 'lucide-react';
-import { GRID_W, GRID_H } from '../../../shared/constants';
+import { useGame } from '../../context/GameContext';
+import { Layout, Share2, Info, LogOut, Play } from 'lucide-react';
+import { GRID_W, GRID_H } from '../../../../shared/constants';
 
 const Topbar = () => {
-  const { blocks = {}, user } = useGame();
+  const { blocks = {}, user, logout, setShowRegisterModal } = useGame();
   const totalBlocks = Object.keys(blocks || {}).length;
   const maxBlocks = GRID_W * GRID_H;
 
@@ -38,16 +38,24 @@ const Topbar = () => {
         <button className="icon-btn" title="How to Play">
           <Info size={20} />
         </button>
-        {user && (
+        {user ? (
           <div className="player-profile">
             <div className="profile-text">
               <span className="p-name">{user.username}</span>
               <span className="p-status">Online</span>
             </div>
             <div className="profile-avatar" style={{ backgroundColor: user.color }}>
-              {user.username[0]}
+              {user.username.charAt(0).toUpperCase()}
             </div>
+            <button className="icon-btn logout-btn" onClick={logout} title="Logout">
+              <LogOut size={18} />
+            </button>
           </div>
+        ) : (
+          <button className="primary-btn" onClick={() => setShowRegisterModal(true)}>
+            <Play size={16} />
+            <span>Join Now</span>
+          </button>
         )}
       </div>
     </header>

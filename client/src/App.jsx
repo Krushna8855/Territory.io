@@ -1,26 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { GameProvider, useGame } from './context/GameContext';
-import Topbar from './components/Topbar';
-import Grid from './components/Grid';
-import Sidebar from './components/Sidebar';
-import Feed from './components/Feed';
-import Powerups from './components/Powerups';
-import Cooldown from './components/Cooldown';
-import { COLORS } from '../../shared/constants.js';
-import { Play, X } from 'lucide-react';
+import Topbar from './components/layout/Topbar';
+import Grid from './components/game/Grid';
+import Sidebar from './components/layout/Sidebar';
+import Feed from './components/layout/Feed';
+import Powerups from './components/game/Powerups';
+import Cooldown from './components/game/Cooldown';
+import AuthModal from './components/auth/AuthModal';
+import MatrixBackground from './components/shared/MatrixBackground';
 
 const GameContent = () => {
-  const { showRegisterModal, setShowRegisterModal, user, socket, toasts } = useGame();
-  const [username, setUsername] = useState('');
-  const [selectedColor, setSelectedColor] = useState(COLORS[0]);
-
-  const handleRegister = () => {
-    if (!username.trim()) return;
-    socket?.emit('register', { username: username.trim(), color: selectedColor });
-  };
+  const { showRegisterModal, setShowRegisterModal, toasts } = useGame();
 
   return (
     <div className="app-layout">
+      <MatrixBackground />
       <Topbar />
       
       <main className="game-container">
@@ -28,65 +22,15 @@ const GameContent = () => {
           <div className="map-card">
             <Grid />
           </div>
-          <Feed />
         </div>
         <div className="sidebar-column">
           <Sidebar />
           <Powerups />
         </div>
       </main>
+      
       <Cooldown />
-
-      {/* Registration Modal */}
-      {showRegisterModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <div className="header-flex">
-                <h2>Join the War</h2>
-                <button className="close-btn" onClick={() => setShowRegisterModal(false)}>
-                  <X size={20} />
-                </button>
-              </div>
-              {!user && <p>Claim your territory in the global grid</p>}
-            </div>
-            
-            <div className="modal-body">
-              <div className="input-field">
-                <label>Vessel Name</label>
-                <input 
-                  type="text" 
-                  value={username} 
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Enter username..."
-                  autoFocus
-                />
-              </div>
-
-              <div className="color-selector">
-                <label>Signature Color</label>
-                <div className="color-grid">
-                  {COLORS.map(c => (
-                    <button 
-                      key={c}
-                      className={`color-pill ${selectedColor === c ? 'active' : ''}`}
-                      style={{ backgroundColor: c }}
-                      onClick={() => setSelectedColor(c)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="primary-btn" onClick={handleRegister}>
-                <Play size={18} />
-                <span>Initialize Core</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AuthModal isOpen={showRegisterModal} onClose={() => setShowRegisterModal(false)} />
 
       {/* Toast System */}
       <div className="toasts">

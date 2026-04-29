@@ -1,11 +1,12 @@
 import React, { memo } from 'react';
+import { Crown } from 'lucide-react';
 
-const Cell = memo(({ x, y, block, isRecent, isMine, onHit, onBomb }) => {
+const Cell = memo(({ x, y, block, isRecent, isMine, isKing, onHit, onBomb }) => {
   const isOwned = !!block;
 
   return (
     <div
-      className={`cell ${isOwned ? 'owned' : ''} ${isRecent ? 'just-captured' : ''} ${isMine ? 'mine' : ''}`}
+      className={`cell ${isOwned ? 'owned' : ''} ${isRecent ? 'just-captured' : ''} ${isMine ? 'mine' : ''} ${isKing ? 'is-king' : ''}`}
       style={{
         backgroundColor: isOwned ? block.color : 'transparent',
         '--cell-color': block?.color
@@ -16,6 +17,7 @@ const Cell = memo(({ x, y, block, isRecent, isMine, onHit, onBomb }) => {
         onBomb(x, y);
       }}
     >
+      {isKing && <Crown size={10} className="king-crown" />}
       {isOwned && (
         <div className="cell-tooltip">
           <span className="tooltip-user">{block.username}</span>

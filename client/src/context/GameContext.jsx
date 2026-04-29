@@ -8,6 +8,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? wi
 
 export const GameProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [blocks, setBlocks] = useState({});
   const [user, setUser] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -30,9 +31,13 @@ export const GameProvider = ({ children }) => {
 
   useEffect(() => {
     const newSocket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'], // Allow fallback for better reliability
+      transports: ['polling', 'websocket'], // Force polling first for maximum reliability
+      reconnectionAttempts: 10
     });
     setSocket(newSocket);
+
+    newSocket.on('connect', () => setIsConnected(true));
+    newSocket.on('disconnect', () => setIsConnected(false));
 
     newSocket.on('initial_state', (data) => {
       console.log('📦 State received:', data);
@@ -43,11 +48,20 @@ export const GameProvider = ({ children }) => {
       setIsLoading(false);
     });
 
-    newSocket.on('registered', (userData) => {
+    newSocket.on('registered', (data) => {
+      // Handle older server versions emitting just user object, and new version emitting { user, isNew }
+      const userData = data.user || data;
+      const isNew = data.isNew || false;
+
       setUser(userData);
       localStorage.setItem('territory_user', JSON.stringify(userData));
       setShowRegisterModal(false);
-      addToast(`Access granted: ${userData.username}`, 'success');
+
+      if (isNew) {
+        addToast(`Registration successful! Welcome to the war, ${userData.username}.`, 'success');
+      } else {
+        addToast(`Welcome back, Commander ${userData.username}!`, 'success');
+      }
     });
 
     // Handle session recovery
@@ -65,11 +79,21 @@ export const GameProvider = ({ children }) => {
           y: data.y,
           userId: data.uid,
           username: data.name,
-          color: data.color
+          color: data.color,
+          level: data.level
         }
       }));
       setRecentCapture(`${data.x},${data.y}`);
       setTimeout(() => setRecentCapture(null), 500);
+
+      // UPDATE CURRENT USER IF IT'S THEM
+      if (data.uid === user?.id) {
+        setUser(prev => ({
+          ...prev,
+          xp: (prev.xp || 0) + 10,
+          level: data.level
+        }));
+      }
 
       // INSTANT LEADERBOARD UPDATE
       setLeaderboard(prev => {
@@ -78,12 +102,9 @@ export const GameProvider = ({ children }) => {
         // Winner gets +1
         const winnerIndex = next.findIndex(u => String(u.id) === String(data.uid));
         if (winnerIndex !== -1) {
-          next[winnerIndex] = { ...next[winnerIndex], block_count: parseInt(next[winnerIndex].block_count) + 1 };
+          next[winnerIndex] = { ...next[winnerIndex], block_count: parseInt(next[winnerIndex].block_count) + 1, level: data.level };
         } else {
-          // If winner isn't on the board yet, add them (if board isn't full)
-          if (next.length < 20) {
-            next.push({ id: data.uid, username: data.name, color: data.color, block_count: 1 });
-          }
+          next.push({ id: data.uid, username: data.name, color: data.color, block_count: 1, level: data.level });
         }
 
         // Victim gets -1
@@ -94,8 +115,8 @@ export const GameProvider = ({ children }) => {
           }
         }
 
-        // Sort by score immediately
-        return next.sort((a, b) => b.block_count - a.block_count);
+        // Sort by score immediately and keep top 50
+        return next.sort((a, b) => b.block_count - a.block_count).slice(0, 50);
       });
 
       // Add to live feed
@@ -115,12 +136,41 @@ export const GameProvider = ({ children }) => {
       setOnlineCount(data.onlineCount);
     });
 
-    newSocket.on('user_left', (data) => {
-      setOnlineCount(data.onlineCount);
+    newSocket.on('nuke_impact', (data) => {
+      // Impact logic: update all blocks hit
+      setBlocks(prev => {
+        const next = { ...prev };
+        data.blocks.forEach(b => {
+          next[`${b.x},${b.y}`] = {
+            x: b.x, y: b.y, userId: data.uid, username: data.name, color: data.color
+          };
+        });
+        return next;
+      });
+
+      // SCREEN SHAKE EFFECT
+      document.body.classList.add('shake');
+      setTimeout(() => document.body.classList.remove('shake'), 500);
+
+      // Add to feed with special tag
+      setActivityFeed(prev => [
+        {
+          id: Date.now(),
+          user: data.name,
+          color: data.color,
+          action: `🚀 DEPLOYED A NUKE AT (${data.x}, ${data.y})!`,
+          time: new Date().toLocaleTimeString()
+        },
+        ...prev.slice(0, 19)
+      ]);
     });
 
     newSocket.on('alert', (data) => {
       addToast(data.msg, data.type || 'info');
+    });
+
+    newSocket.on('error', (data) => {
+      addToast(data.message || 'An error occurred', 'danger');
     });
     
     newSocket.on('gift', (data) => {
@@ -165,6 +215,13 @@ export const GameProvider = ({ children }) => {
     setCooldown(RECHARGE_MS); 
   }, [user, cooldown, socket]);
 
+  const logout = () => {
+    localStorage.removeItem('territory_user');
+    setUser(null);
+    setShowRegisterModal(true);
+    socket?.emit('logout');
+  };
+
   const useBomb = (x, y) => {
     if (powerups.BOMB <= 0) return;
     socket.emit('use_bomb', { x, y });
@@ -180,6 +237,7 @@ export const GameProvider = ({ children }) => {
 
   const value = {
     socket,
+    isConnected,
     blocks,
     user,
     leaderboard,
@@ -195,7 +253,8 @@ export const GameProvider = ({ children }) => {
     useBomb,
     powerups,
     cooldown,
-    activityFeed
+    activityFeed,
+    logout
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

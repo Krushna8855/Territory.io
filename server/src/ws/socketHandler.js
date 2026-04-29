@@ -1,4 +1,5 @@
 import { GameViewModel } from '../viewmodels/GameViewModel.js';
+import { GameModel } from '../models/GameModel.js';
 import { GRID_W, GRID_H, RECHARGE_MS, COLORS, LUCK_FACTOR, BONUSES } from '../../../shared/constants.js';
 
 const connectedUsers = new Map();
@@ -36,7 +37,7 @@ export default (io) => {
 
     socket.on('register', async (data) => {
       try {
-        const { username, color, id } = data;
+        const { username, color, id, password } = data;
         
         let user;
         if (id) {
@@ -44,23 +45,38 @@ export default (io) => {
           if (user) {
             currentUser = user;
             connectedUsers.set(socket.id, currentUser);
-            socket.emit('registered', currentUser);
+            socket.emit('registered', { user: currentUser, isNew: false });
             io.emit('user_joined', { user: currentUser, onlineCount: connectedUsers.size });
             return;
           }
         }
 
-        const targetName = username || generateUsername();
+        let isNew = false;
+
+        if (!username || !password) {
+          socket.emit('error', { message: 'Username and password are required.' });
+          return;
+        }
+
         const targetColor = color || getRandomColor();
-        
-        user = await GameViewModel.onboardUser(targetName, targetColor);
-        currentUser = user;
-        connectedUsers.set(socket.id, currentUser);
-        
-        socket.emit('registered', currentUser);
-        io.emit('user_joined', { user: currentUser, onlineCount: connectedUsers.size });
+        try {
+          const authResult = await GameViewModel.onboardUser(username, targetColor, password);
+          user = authResult.user;
+          isNew = authResult.isNew;
+          currentUser = user;
+          connectedUsers.set(socket.id, currentUser);
+          
+          socket.emit('registered', { user: currentUser, isNew });
+          io.emit('user_joined', { user: currentUser, onlineCount: connectedUsers.size });
+        } catch(e) {
+          throw e;
+        }
       } catch (error) {
-        socket.emit('error', { message: error.message });
+        if (error.message === 'USERNAME_TAKEN') {
+          socket.emit('error', { message: '⚠️ Name already taken! Please choose another or check your password.' });
+        } else {
+          socket.emit('error', { message: error.message });
+        }
       }
     });
 
@@ -78,26 +94,62 @@ export default (io) => {
         if (result.success) {
           userCooldowns.set(currentUser.id, Date.now());
           
+          // AWARD XP
+          const { xp, level } = await GameModel.addXP(currentUser.id, 10);
+          currentUser.xp = xp;
+          currentUser.level = level;
+
           const hit = { 
             x, y, 
             uid: currentUser.id, 
             name: currentUser.username, 
             color: currentUser.color,
-            victimId: result.victim ? result.victim.id : null // Tell everyone who lost the tile
+            level: currentUser.level,
+            victimId: result.victim ? result.victim.id : null
           };
           io.emit('tile_hit', hit);
-
-          if (result.victim) {
-            // Logic for notifying victims could go here
-          }
 
           if (Math.random() < LUCK_FACTOR) {
             socket.emit('gift', { type: BONUSES.NUKE });
           }
+        } else if (result.error === 'SHIELD_ACTIVE') {
+          socket.emit('alert', { msg: '🛡️ THIS TILE IS SHIELDED!', type: 'info' });
         }
       } catch (error) {
         console.error('Claim Error:', error);
       }
+    });
+
+    socket.on('use_bomb', async (data) => {
+      if (!currentUser) return;
+      try {
+        const { x, y } = data;
+        const result = await GameViewModel.handleNuke(x, y, currentUser.id);
+        
+        if (result.success) {
+          // GLOBAL CINEMATIC ALERT
+          io.emit('nuke_impact', {
+            x, y,
+            uid: currentUser.id,
+            name: currentUser.username,
+            color: currentUser.color,
+            blocks: result.blocks
+          });
+          
+          io.emit('alert', {
+            msg: `☢️ NUKE DEPLOYED BY ${currentUser.username.toUpperCase()}!`,
+            type: 'danger'
+          });
+        }
+      } catch (error) {
+        socket.emit('error', { message: 'Nuke failed' });
+      }
+    });
+
+    socket.on('logout', () => {
+      connectedUsers.delete(socket.id);
+      currentUser = null;
+      io.emit('user_left', { user: currentUser, onlineCount: connectedUsers.size });
     });
 
     socket.on('disconnect', () => {

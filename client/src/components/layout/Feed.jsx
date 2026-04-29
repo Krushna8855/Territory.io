@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../context/GameContext';
 import { Activity } from 'lucide-react';
 
 const Feed = () => {
@@ -12,7 +12,7 @@ const Feed = () => {
         <span>Live Feed</span>
       </div>
       <div className="feed-list">
-        {activityFeed.map(event => (
+        {(activityFeed || []).map(event => (
           <div key={event.id} className="feed-item animate-slide-in">
             <div className="feed-dot" style={{ backgroundColor: event.color }}></div>
             <span className="feed-msg">

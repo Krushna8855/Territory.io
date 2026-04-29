@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../context/GameContext';
 import { Trophy, Users, Shield, Zap } from 'lucide-react';
+import { GRID_W, GRID_H } from '../../../../shared/constants.js';
+import Feed from './Feed';
 
 const Sidebar = () => {
   const { leaderboard, onlineCount, user, blocks } = useGame();
@@ -15,6 +17,18 @@ const Sidebar = () => {
           <div className="stat-info">
             <span className="stat-label">Online</span>
             <span className="stat-value">{onlineCount || 0}</span>
+          </div>
+        </div>
+        <div className="stat-item level-item">
+          <Zap size={20} color="#fbbf24" />
+          <div className="stat-info xp-info">
+            <div className="xp-header">
+              <span className="stat-label">Level {user?.level || 1}</span>
+              <span className="xp-text">{user?.xp || 0} XP</span>
+            </div>
+            <div className="xp-bar">
+              <div className="xp-fill" style={{ width: `${(user?.xp % 1000) / 10}%` }}></div>
+            </div>
           </div>
         </div>
         <div className="stat-item">
@@ -49,6 +63,8 @@ const Sidebar = () => {
           ))}
         </div>
       </div>
+
+      <Feed />
     </aside>
   );
 };

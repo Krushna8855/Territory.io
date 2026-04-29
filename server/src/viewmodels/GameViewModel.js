@@ -37,13 +37,32 @@ export class GameViewModel {
     return await GameModel.claimBlock(x, y, userId);
   }
 
+  static async handleNuke(x, y, userId) {
+    if (x < 0 || x >= GRID_W || y < 0 || y >= GRID_H) {
+      throw new Error('Coordinates out of bounds');
+    }
+
+    return await GameModel.claimArea(x, y, 1, userId);
+  }
+
   static async syncUser(id) {
     return await GameModel.findUserById(id);
   }
 
-  static async onboardUser(name, color) {
+  static async onboardUser(name, color, password) {
     // Validation logic
     if (!name || name.length < 3) throw new Error('Name too short');
-    return await GameModel.createNewUser(name, color);
+    
+    const existing = await GameModel.findUserByUsername(name);
+    if (existing) {
+      // If user exists, check password for login
+      if (existing.password === password) {
+        return { user: existing, isNew: false };
+      }
+      throw new Error('USERNAME_TAKEN');
+    }
+
+    const newUser = await GameModel.createNewUser(name, color, password);
+    return { user: newUser, isNew: true };
   }
 }
