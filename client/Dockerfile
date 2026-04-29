@@ -12,6 +12,8 @@ RUN npm install
 
 # Copy source and build
 COPY client/ ./
+ARG VITE_SOCKET_URL
+ENV VITE_SOCKET_URL=\$VITE_SOCKET_URL
 RUN npm run build
 
 # Production Stage
