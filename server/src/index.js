@@ -25,7 +25,7 @@ app.use('/api', apiRoutes);
 socketHandler(io);
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Territory server running on port ${PORT}`);
   console.log(`📊 Grid size: ${GRID_W}x${GRID_H}`);
 });
