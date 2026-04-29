@@ -28,15 +28,6 @@ RUN printf "server { \n\
         index index.html index.htm; \n\
         try_files \$uri \$uri/ /index.html; \n\
     } \n\
-    location /api { \n\
-        proxy_pass http://server:3001; \n\
-    } \n\
-    location /socket.io { \n\
-        proxy_pass http://server:3001; \n\
-        proxy_http_version 1.1; \n\
-        proxy_set_header Upgrade \$http_upgrade; \n\
-        proxy_set_header Connection \"upgrade\"; \n\
-    } \n\
 }" > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
